@@ -1,2 +1,4 @@
 *.pth
 wandb/*
+custom_covid_dataset/*
+*.dat

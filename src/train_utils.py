@@ -21,7 +21,8 @@ def test1(generator, discriminator, num_epochs, metrics):
     now = datetime.datetime.now()
     g_losses = metrics['train.G_losses'][-1]
     d_losses = metrics['train.D_losses'][-1]
-    path='augGAN/output_images'
+    path='augGAN/output_images_prototype'
+    os.makedirs(os.path.join('.', path), exist_ok=True)
     # try:
     #   os.mkdir(os.path.join('.', path))
     # except Exception as error:
@@ -45,9 +46,9 @@ def test2(generator, discriminator, num_epochs, metrics, loader):
     now = datetime.datetime.now()
     g_losses = metrics['train.G_losses'][-1]
     d_losses = metrics['train.D_losses'][-1]
-    path='augGAN/output_images'
+    path='augGAN/output_images_prototype'
     try:
-      os.mkdir(os.path.join('.', path))
+      os.makedirs(os.path.join('.', path), exist_ok=True)
     except Exception as error:
       print(error)
 
@@ -72,7 +73,6 @@ def test2(generator, discriminator, num_epochs, metrics, loader):
     fig.savefig('%s/image_%.3f_%.3f_%d_%s.png' %
                     (path, g_losses, d_losses, num_epochs, now.strftime("%Y-%m-%d_%H:%M:%S")))
 
-
 def test_fake(generator, discriminator, metrics, n_images, folname):
     now = datetime.datetime.now()
     g_losses = metrics['train.G_losses'][-1]
@@ -80,7 +80,7 @@ def test_fake(generator, discriminator, metrics, n_images, folname):
     #path='augGAN/output_images/%+.3f_%+.3f_%d_%s'% (g_losses, d_losses, n_images, now.strftime("%Y-%m-%d_%H:%M:%S"))
     path='main_folder/'+str(n_images)+'/'+folname
     try:
-      os.mkdir(os.path.join('.', path))
+      os.makedirs(os.path.join('.', path), exist_ok=True)
     except Exception as error:
       print(error)
 
@@ -89,7 +89,8 @@ def test_fake(generator, discriminator, metrics, n_images, folname):
     for i_batch in range(0, n_images, im_batch_size):
         gen_z = torch.randn(im_batch_size, 100, 1, 1, device=device)
         gen_images = generator(gen_z)
-        dis_result = discriminator(gen_images).view(-1)
+        dis_result, _ = discriminator(gen_images)
+        dis_result = dis_result.view(-1)
         images = gen_images.to("cpu").clone().detach()
         images = images.numpy().transpose(0, 2, 3, 1)
         for i_image in range(gen_images.size(0)):
@@ -148,7 +149,8 @@ def train_gan(generator, discriminator, gen_optimizer, dis_optimizer,
             b_size = b_real.size(0)
             label = torch.full((b_size,), real_label, device=device)
             # Forward pass real batch through D
-            output = discriminator(b_real).view(-1)
+            output, feat_R = discriminator(b_real)
+            output = output.view(-1)
             # Calculate loss on all-real batch
             errD_real = criterion(output, label)
             # Calculate gradients for D in backward pass
@@ -163,10 +165,12 @@ def train_gan(generator, discriminator, gen_optimizer, dis_optimizer,
             fake = generator(noise)
             label.fill_(fake_label)
             # Classify all fake batch with D
-            output = discriminator(fake.detach()).view(-1)
+            output, _ = discriminator(fake.detach())
+            output = output.view(-1)
             # Calculate D's loss on the all-fake batch
+            # import IPython; IPython.embed()
             errD_fake = criterion(output, label)
-            # Calculate the gradients for this batch
+            
             errD_fake.backward()
             D_G_z1 = output.mean().item()
             metrics['train.D_G_z1'].append(D_G_z1)
@@ -183,12 +187,27 @@ def train_gan(generator, discriminator, gen_optimizer, dis_optimizer,
             # (2) Update G network: maximize log(D(G(z)))
             generator.zero_grad()
             label.fill_(real_label)  # fake labels are real for generator cost
+            
             # Since we just updated D, perform another forward pass of all-fake batch through D
-            output = discriminator(fake).view(-1)
+            output, feat_F = discriminator(fake)
+            output = output.view(-1)
             # Calculate G's loss based on this output
             errG = criterion(output, label)
             # Calculate gradients for G
-            errG.backward()
+            feat_f, feat_m_f, feat_v_f = feat_F
+            feat_r, feat_m_r, feat_v_r = feat_R
+            
+            feat_r = feat_r.detach()
+            feat_m_r = feat_m_r.detach()
+            feat_v_r = feat_v_r.detach()
+            # Calculate the gradients for this batch
+            matching_loss =  feat_f - feat_r
+            proto_loss = feat_m_f - feat_m_r
+            var_loss = feat_v_f
+            
+            errG = errG + (epoch / num_epochs) * matching_loss.mean() + (epoch / num_epochs) * proto_loss.mean() - 2 * var_loss.mean()
+            errG.backward(retain_graph=True)
+            
             D_G_z2 = output.mean().item()
             metrics['train.D_G_z2'].append(D_G_z2)
             # Update G
@@ -199,6 +218,9 @@ def train_gan(generator, discriminator, gen_optimizer, dis_optimizer,
             D_losses.append(errD.item())
             metrics['train.G_losses'].append(errG.item())
             metrics['train.D_losses'].append(errD.item())
+            metrics['train.D_matching_loss'].append(matching_loss.mean().item())
+            metrics['train.D_proto_loss'].append(proto_loss.mean().item())
+            metrics['train.D_var_loss'].append(var_loss.mean().item())
 
             # Check how the generator is doing by saving G's output on fixed_noise
             if (iters % 500 == 0) or ((epoch == num_epochs-1) and (i == len(train_loader)-1)):
@@ -207,9 +229,11 @@ def train_gan(generator, discriminator, gen_optimizer, dis_optimizer,
                 img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
 
             iters += 1
-        print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                % (epoch+1, num_epochs, i, len(train_loader),
-                errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
+        print(f"Epoch {epoch+1}/{num_epochs}\tLoss_D: {errD.item():.4f}\tLoss_G: {errG.item():.4f}\tD(x): {D_x:.4f}\tD(G(z)): {D_G_z1:.4f} / {D_G_z2:.4f}\n \
+              Matching Loss: {matching_loss.mean().item():.4f}\tProto Loss: {proto_loss.mean().item():.4f}\tVar Loss: {var_loss.mean().item():.4f}")
+        # print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+        #         % (epoch+1, num_epochs, i, len(train_loader),
+        #         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2, ))
     save_model(generator, discriminator, gen_optimizer, dis_optimizer, metrics, num_epochs)
     
 def compute_metrics(cm):

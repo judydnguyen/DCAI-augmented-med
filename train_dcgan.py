@@ -46,6 +46,9 @@ if __name__ == '__main__':
     'train.D_G_z2',
     'train.G_losses',
     'train.D_losses',
+    'train.D_matching_loss',
+    'train.D_proto_loss',
+    'train.D_var_loss'
     ]
     metrics = {field: list() for field in METRIC_FIELDS}
 
@@ -101,7 +104,7 @@ if __name__ == '__main__':
             train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                                     shuffle=True)
             train_gan(generator, discriminator, gen_optimizer, dis_optimizer, train_loader,
-                    num_epochs, metrics)
+                    num_epochs, metrics, device=device, criterion=criterion)
             test2(generator, discriminator, num_epochs, metrics, train_loader)
         else:
             # idx = []

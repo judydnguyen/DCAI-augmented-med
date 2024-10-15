@@ -22,7 +22,7 @@ from sklearn.utils.multiclass import unique_labels
 data_dir = './custom_covid_dataset/'
 original_train_dir = 'train/'
 train_classic_augmented_dir = 'train_classic/'
-train_synthetic_augmented_dir = 'train_synthetic/'
+train_synthetic_augmented_dir = 'train_synthetic_proto/'
 test_dir = 'test/'
 
 transform = transforms.Compose([transforms.Grayscale(num_output_channels=1),
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     set_seed(42)
     lr=0.01
     
-    name_new_folder= 'CNN_'+str(channels_size)+'CH_O'+str(1)+'+C3'+'+G4'+'_batch'+str(batch_size_train)+'_lr'+str(lr)+'w_aug'+'_{}'.format(datetime.datetime.now())
+    name_new_folder= 'Proto_CNN_'+str(channels_size)+'CH_O'+str(1)+'+C3'+'+G4'+'_batch'+str(batch_size_train)+'_lr'+str(lr)+'w_aug'+'_{}'.format(datetime.datetime.now())
     
     wandb.init(project='MedSyn-DCAI', 
                entity='duwgnt',

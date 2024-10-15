@@ -45,10 +45,44 @@ class Generator(nn.Module):
     def forward(self, input):
         return self.main(input)
     
+# class Discriminator(nn.Module):
+#     def __init__(self):
+#         super(Discriminator, self).__init__()
+#         self.main = nn.Sequential(
+#             # input is (nc) x 64 x 64
+#             nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
+#             nn.LeakyReLU(0.2, inplace=True),
+#             nn.Dropout(p=0.5),
+#             # state size. (ndf) x 32 x 32
+#             nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
+#             nn.BatchNorm2d(ndf * 2),
+#             nn.LeakyReLU(0.2, inplace=True),
+#             # state size. (ndf*2) x 16 x 16
+#             nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
+#             nn.BatchNorm2d(ndf * 4),
+#             nn.LeakyReLU(0.2, inplace=True),
+#             nn.Dropout(p=0.5),
+#             # state size. (ndf*4) x 8 x 8
+#             nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
+#             nn.BatchNorm2d(ndf * 8),
+#             nn.Dropout(p=0.25),
+#             nn.LeakyReLU(0.2, inplace=True),
+#             # state size. (ndf*8) x 4 x 4
+#             nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+#             nn.Sigmoid()
+#         )
+
+#     def forward(self, input):
+#         return self.main(input)
+
+# import torch
+# import torch.nn as nn
+
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, nc=1, ndf=64):
         super(Discriminator, self).__init__()
-        self.main = nn.Sequential(
+        # Define downsampling layers
+        self.down_blocks = nn.Sequential(
             # input is (nc) x 64 x 64
             nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
@@ -67,13 +101,29 @@ class Discriminator(nn.Module):
             nn.BatchNorm2d(ndf * 8),
             nn.Dropout(p=0.25),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid()
         )
+        
+        # Final classification layer
+        self.final_conv = nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, input):
-        return self.main(input)
+        # Pass through downsampling layers
+        features = self.down_blocks(input)
+        # print(features.shape)
+        feat_out = features.view(features.size(0), -1)
+        feat_out_mean = torch.mean(feat_out,dim=0)
+        feat_out_var = torch.var(feat_out,dim=0)
+        # Return the intermediate feature map as prototype
+        return self.sigmoid(self.final_conv(features)), (feat_out, feat_out_mean, feat_out_var)
+
+# # Example: Extracting prototypes
+# discriminator = Discriminator()
+# input_image = torch.randn(1, 3, 64, 64)  # Example input image
+# prototypes, output = discriminator(input_image)
+
+# print(f"Prototypes shape: {prototypes.shape}")
+
     
 def weights_init(m):
     classname = m.__class__.__name__
@@ -139,3 +189,140 @@ class CNN(nn.Module):
         x_2 = self._models[2](x_1)
         x_3 = self._models[3](x_2)
         return x_3
+    
+class netG(nn.Module):
+
+    def __init__(self, nz, ngf, nc):
+
+        super(netG, self).__init__()
+        self.ReLU = nn.ReLU(True)
+        self.Tanh = nn.Tanh()
+        #self.DropOut = nn.Dropout(p=0.75)
+        #self.conv0 = nn.ConvTranspose2d(nz, ngf * 16, 4, 1, 1, bias=False)
+        #self.BatchNorm0 = nn.BatchNorm2d(ngf * 16)
+        self.conv1 = nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False)
+        self.BatchNorm1 = nn.BatchNorm2d(ngf * 8)
+
+        self.conv2 = nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False)
+        self.BatchNorm2 = nn.BatchNorm2d(ngf * 4)
+
+        self.conv3 = nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False)
+        self.BatchNorm3 = nn.BatchNorm2d(ngf * 2)
+
+        self.conv4 = nn.ConvTranspose2d(ngf * 2, ngf * 1, 4, 2, 1, bias=False)
+        self.BatchNorm4 = nn.BatchNorm2d(ngf * 1)
+
+        self.conv5 = nn.ConvTranspose2d(ngf * 1, nc, 4, 2, 1, bias=False)
+
+        self.apply(weights_init)
+
+
+    def forward(self, input):
+        #x = self.conv0(input)
+        #x = self.BatchNorm0(x)
+        #x = self.ReLU(x)
+        x = self.conv1(input)
+        x = self.BatchNorm1(x)
+        x = self.ReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv2(x)
+        x = self.BatchNorm2(x)
+        x = self.ReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv3(x)
+        x = self.BatchNorm3(x)
+        x = self.ReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv4(x)
+        x = self.BatchNorm4(x)
+        x = self.ReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv5(x)
+        output = self.Tanh(x)
+        return output
+    
+class netD(nn.Module):
+
+    def __init__(self, ndf, nc, nb_label):
+
+        super(netD, self).__init__()
+        self.LeakyReLU = nn.LeakyReLU(0.2, inplace=True)
+        self.DropOut1 = nn.Dropout(p=0.5)
+        self.DropOut2 = nn.Dropout(p=0.25)
+        self.conv1 = nn.Conv2d(nc, ndf, 4, 2, 1, bias=False)
+        self.conv2 = nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False)
+        self.BatchNorm2 = nn.BatchNorm2d(ndf * 2)
+        self.conv3 = nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False)
+        self.BatchNorm3 = nn.BatchNorm2d(ndf * 4)
+        self.conv4 = nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False)
+        self.BatchNorm4 = nn.BatchNorm2d(ndf * 8)
+        self.conv5 = nn.Conv2d(ndf * 8, ndf * 1, 4, 1, 0, bias=False)
+        self.disc_linear = nn.Linear(ndf * 1, 1)
+        self.aux_linear = nn.Linear(ndf * 1, nb_label)
+        self.softmax = nn.Softmax()
+        self.sigmoid = nn.Sigmoid()
+        self.ndf = ndf
+        self.apply(weights_init)
+    
+    def feature(self, input):
+        x = self.conv1(input)
+        x = self.LeakyReLU(x)
+        x = self.DropOut1(x)
+
+        x = self.conv2(x)
+        x = self.BatchNorm2(x)
+        x = self.LeakyReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv3(x)
+        x = self.BatchNorm3(x)
+        x = self.LeakyReLU(x)
+        x = self.DropOut1(x)
+
+        x = self.conv4(x)
+        x = self.BatchNorm4(x)
+        x = self.LeakyReLU(x)
+        x = self.DropOut2(x)
+
+        x = self.conv5(x)
+        x = x.view(-1, self.ndf * 1)
+        return x
+    
+    def forward(self, input):
+        feat = self.feature(input)
+        c = self.aux_linear(feat)
+        c = self.softmax(c)
+        s = self.disc_linear(feat)
+        s = self.sigmoid(s)
+        return s, c, feat
+        # x = self.conv1(input)
+        # x = self.LeakyReLU(x)
+        # x = self.DropOut1(x)
+
+        # x = self.conv2(x)
+        # x = self.BatchNorm2(x)
+        # x = self.LeakyReLU(x)
+        # #x = self.DropOut(x)
+
+        # x = self.conv3(x)
+        # x = self.BatchNorm3(x)
+        # x = self.LeakyReLU(x)
+        # x = self.DropOut1(x)
+
+        # x = self.conv4(x)
+        # x = self.BatchNorm4(x)
+        # x = self.LeakyReLU(x)
+        # x = self.DropOut2(x)
+
+        # x = self.conv5(x)
+        # x = x.view(-1, self.ndf * 1)
+        # # import IPython; IPython.embed()
+        # c = self.aux_linear(x)
+        # c = self.softmax(c)
+        # s = self.disc_linear(x)
+        # s = self.sigmoid(s)
+        # return s, c
