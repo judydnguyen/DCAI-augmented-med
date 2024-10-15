@@ -15,12 +15,12 @@ PATH = "augGAN/model/-21.495_+1.273_100_2024-10-14_21:29:25.dat"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Define your sets (number of images per class) and the desired number of samples per class
-N = 100  # Number of images to generate per class
+N = 2000  # Number of images to generate per class
 paths = [
-    'custom_covid_dataset/train_synthetic_proto/covid',
-    'custom_covid_dataset/train_synthetic_proto/normal',
-    'custom_covid_dataset/train_synthetic_proto/pneumonia_bac',
-    'custom_covid_dataset/train_synthetic_proto/pneumonia_vir'
+    f'custom_covid_dataset/train_synthetic_proto/{N}/covid',
+    f'custom_covid_dataset/train_synthetic_proto/{N}/normal',
+    f'custom_covid_dataset/train_synthetic_proto/{N}/pneumonia_bac',
+    f'custom_covid_dataset/train_synthetic_proto/{N}/pneumonia_vir'
 ]
 
 # Define the class names
@@ -40,7 +40,6 @@ def test_fake(generator, discriminator, metrics, n_images_per_class, paths, clas
             class_path = paths[class_idx]
             try:
                 os.makedirs(class_path, exist_ok=True)
-                os.makedirs(os.path.join(class_path, str(N)), exist_ok=True)
             except Exception as error:
                 print(error)
 
@@ -84,7 +83,7 @@ def test_fake(generator, discriminator, metrics, n_images_per_class, paths, clas
 
                 # Save the generated images
                 for i_image in range(num_matching_images):
-                    image_path = os.path.join(class_path, str(N), f'image_{batch_index:04d}_{i_image}.png')
+                    image_path = os.path.join(class_path, f'image_{batch_index:04d}_{i_image}.png')
                     save_image(matching_images[i_image, :, :, :], image_path, normalize=True)
                     batch_index += 1
                 
