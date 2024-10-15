@@ -25,6 +25,19 @@ train_classic_augmented_dir = 'train_classic/'
 train_synthetic_augmented_dir = 'train_synthetic_proto/'
 test_dir = 'test/'
 
+def create_dataloader(epoch):
+    if epoch < 200:
+        # Use original, classic augmented, and GAN samples
+        listtrainset = listtrainset_classic + listtrainset_gan
+    else:
+        # Use only original and classic augmented samples
+        listtrainset = listtrainset_no_aug
+
+    trainset_concat = torch.utils.data.ConcatDataset(listtrainset)
+    sampler = torch.utils.data.RandomSampler(trainset_concat, replacement=True, num_samples=num_samples)
+
+    return torch.utils.data.DataLoader(trainset_concat, sampler=sampler, batch_size=batch_size_train, drop_last=True)
+
 transform = transforms.Compose([transforms.Grayscale(num_output_channels=1),
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.5), (0.5))])
@@ -81,9 +94,10 @@ if __name__ == "__main__":
     # listtrainset = listtrainset_no_aug
     trainset_concat = torch.utils.data.ConcatDataset(listtrainset)
 
-    sampler = torch.utils.data.RandomSampler(trainset_concat,replacement=True, num_samples=num_samples)
+    sampler = torch.utils.data.RandomSampler(trainset_concat, replacement=True, 
+                                             num_samples=num_samples)
 
-    trainloader = torch.utils.data.DataLoader(trainset_concat,  sampler=sampler,
+    trainloader = torch.utils.data.DataLoader(trainset_concat, sampler=sampler,
                                             batch_size=batch_size_train, drop_last=True)
 
     # TEST IMAGES

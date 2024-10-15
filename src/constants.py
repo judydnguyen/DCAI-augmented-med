@@ -44,8 +44,8 @@ fixed_noise = torch.randn(64, nz, 1, 1, device=device) #batch of 64
 # Define Loss function
 criterion = nn.BCELoss()
 
-batch_size_train=256
-batch_size_test=36
+batch_size_train=512
+batch_size_test=256
 num_samples=batch_size_train
 img_dim=64
 
@@ -55,7 +55,7 @@ class_number=4
 
 batch_size = 32
 # Number of training epochs
-num_epochs = 100
+num_epochs = 200
 
 #All images will be resized to this size using a transformer.
 #image_size = 64

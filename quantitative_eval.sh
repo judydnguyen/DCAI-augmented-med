@@ -2,7 +2,7 @@
 
 # Define the paths
 REAL_FOLDER_PATH="custom_covid_dataset/train"
-FAKE_FOLDER_PATH="custom_covid_dataset/train_classic/2000"
+FAKE_FOLDER_PATH="custom_covid_dataset/train_synthetic_proto/2000"
 
 # Define the suffixes
 REAL_FOLDER_SUFFIX=("covid" "normal" "pneumonia_bac" "pneumonia_vir")

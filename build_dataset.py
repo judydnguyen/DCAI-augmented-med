@@ -8,20 +8,14 @@ from src.constants import *
 from src.models import *
 from src.train_utils import *
 
-PATH = "augGAN/model/-21.495_+1.273_100_2024-10-14_21:29:25.dat"
+PATH = "augGAN/model/-18.150_+1.225_200_2024-10-14_22:11:08.dat"
 
 
 # Assuming 'generator', 'discriminator', and 'metrics' are predefined models and metrics
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Define your sets (number of images per class) and the desired number of samples per class
-N = 2000  # Number of images to generate per class
-paths = [
-    f'custom_covid_dataset/train_synthetic_proto/{N}/covid',
-    f'custom_covid_dataset/train_synthetic_proto/{N}/normal',
-    f'custom_covid_dataset/train_synthetic_proto/{N}/pneumonia_bac',
-    f'custom_covid_dataset/train_synthetic_proto/{N}/pneumonia_vir'
-]
+# List of N values (number of images to generate per class)
+N_list = [100, 500, 1000, 2000]  # You can adjust this list with any number of desired N values
 
 # Define the class names
 classes = ("covid", "normal", "pneumonia_bac", "pneumonia_vir")
@@ -58,15 +52,10 @@ def test_fake(generator, discriminator, metrics, n_images_per_class, paths, clas
                 # Discriminator output
                 s, c,  _ = discriminator(gen_images)
                 
-                # import IPython; IPython.embed()
                 # Get the predicted class
                 pred_class = c.argmax(dim=1).view(-1)
                 
-                # pred_class = c.view(-1)
-                print(f"pred_class: {pred_class}")
-                
                 # Filter only the images that the discriminator classifies as matching the class
-                # import IPython; IPython.embed()
                 matching_images_indices = (pred_class == class_idx).nonzero(as_tuple=True)[0]
                 matching_images = gen_images[matching_images_indices]
                 num_matching_images = matching_images.size(0)
@@ -95,16 +84,25 @@ def test_fake(generator, discriminator, metrics, n_images_per_class, paths, clas
             print(f'Generated {n_images_per_class} images for class {class_name}')
 
 # Assuming you have a generator, discriminator, and metrics objects available
-
-# generator = Generator().to(device)
-# discriminator = Discriminator().to(device)
-
 generator = netG(nz, ngf, nc).to(device)
 discriminator = netD(ndf, nc, nb_label).to(device)
 
 checkpoint = torch.load(PATH)
 generator.load_state_dict(checkpoint['state_dict_generator'])
 discriminator.load_state_dict(checkpoint['state_dict_discriminator'])
-metrics=checkpoint['metrics']
-# Call the function to generate N samples per class
-test_fake(generator, discriminator, metrics, N, paths, classes)
+metrics = checkpoint['metrics']
+
+# Loop through the list of N values
+for N in N_list:
+    print(f"Generating {N} images per class...")
+    
+    # Dynamically update paths based on the current N value
+    paths = [
+        f'custom_covid_dataset/train_synthetic_proto/{N}/covid',
+        f'custom_covid_dataset/train_synthetic_proto/{N}/normal',
+        f'custom_covid_dataset/train_synthetic_proto/{N}/pneumonia_bac',
+        f'custom_covid_dataset/train_synthetic_proto/{N}/pneumonia_vir'
+    ]
+
+    # Call the function to generate N samples per class
+    test_fake(generator, discriminator, metrics, N, paths, classes)
