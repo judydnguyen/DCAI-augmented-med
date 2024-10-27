@@ -177,7 +177,7 @@ def train_acgan(discriminator, generator, train_loader, num_epochs, metrics, bat
 
             errD_fake.backward()
             D_G_z1 = s_output.data.mean()
-            errD = s_errD_real + s_errD_fake
+            errD = s_errD_real - s_errD_fake
             optimizerD.step()
 
             ###########################
@@ -441,7 +441,11 @@ if __name__=='__main__':
 
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                           shuffle=True)
-    
+    mask =[x[1]==0 for x in train_loader.dataset] #here is 0 for covid; 1 for normal; 2 for pneumonia_bacteria; 3 for pneumonia_virus for x-ray dataset
+    idx= np.arange(len(train_loader.dataset))[mask]
+    print("Total samples now are ",len(idx))
+    selected_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
+												sampler = SubsetRandomSampler(idx))
     generator = netG(nz, ngf, nc).to(device)
     discriminator = netD(ndf, nc, nb_label).to(device)
 

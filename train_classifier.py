@@ -25,13 +25,13 @@ train_classic_augmented_dir = 'train_classic/'
 train_synthetic_augmented_dir = 'train_synthetic_proto/'
 test_dir = 'test/'
 
-def create_dataloader(epoch):
+def create_dataloader(epoch, listtrainset_classic, listtrainset_gan, listtrainset_no_aug):
     if epoch < 200:
         # Use original, classic augmented, and GAN samples
         listtrainset = listtrainset_classic + listtrainset_gan
     else:
         # Use only original and classic augmented samples
-        listtrainset = listtrainset_no_aug
+        listtrainset = listtrainset_no_aug + listtrainset_classic
 
     trainset_concat = torch.utils.data.ConcatDataset(listtrainset)
     sampler = torch.utils.data.RandomSampler(trainset_concat, replacement=True, num_samples=num_samples)
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     # listtrainset_classic = [trainset2000]
     # listtrainset_gan = [trainset1000_gan]
     listtrainset_classic = [trainset500,trainset1000,trainset2000]
-    listtrainset_gan = [trainset100_gan,trainset500_gan,trainset1000_gan,trainset2000_gan]
+    listtrainset_gan = [trainset100_gan,trainset500_gan,trainset1000_gan]
     
     # try O1 + C3 + G3
     
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     class_number=4
     METRIC_FIELDS = [ 'loss', 'tot_acc', 'acc', 'sens', 'spec', 'f1_score']
     metrics = {field: list() for field in METRIC_FIELDS}
-    epochs=750
+    epochs=400
     lr=0.01
     m=0.9
     
@@ -142,6 +142,7 @@ if __name__ == "__main__":
         total = 0
         correct = 0
         
+        # trainloader = create_dataloader(epoch, listtrainset_classic, listtrainset_gan, listtrainset_no_aug)
         
         for batch_idx, (inputs, labels) in tqdm(enumerate(trainloader), desc='Batches', total=len(trainloader)):
             inputs, labels = inputs.to(device), labels.to(device)
