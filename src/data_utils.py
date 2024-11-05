@@ -8,7 +8,7 @@ from tqdm import tqdm
 from glob import glob
 from PIL import Image
 
-PARENT_PATH = "skin_lesson_dataset"
+PARENT_PATH = "skin_lesson_dataset/2"
 
 # Define a pytorch dataloader for this dataset
 class HAM10000(Dataset):
@@ -34,7 +34,7 @@ normMean = [0.763033, 0.5456458, 0.5700401]
 normStd = [0.14092815, 0.15261315, 0.16997056]
 
 
-def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=224):
+def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=64):
     
     df_train = pd.read_pickle(PARENT_PATH+'/train_data.pkl')
     df_val = pd.read_pickle(PARENT_PATH+'/val_data.pkl')

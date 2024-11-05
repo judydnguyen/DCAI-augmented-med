@@ -55,7 +55,7 @@ class_number=4
 
 batch_size = 32
 # Number of training epochs
-num_epochs = 200
+num_epochs = 400
 
 #All images will be resized to this size using a transformer.
 #image_size = 64
@@ -77,8 +77,10 @@ ndf = 64
 nb_label = 4
 
 # Learning rate for optimizers
-lr = 0.002
-lr_d = 0.0002
+# lr = 0.002
+# lr_d = 0.0002
+lr = 0.02
+lr_d = 0.002
 # Beta1 hyperparam for Adam optimizers
 beta1 = 0.5
 # Beta2 hyperparam for Adam optimizers
