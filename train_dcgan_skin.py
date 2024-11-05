@@ -22,6 +22,7 @@ from IPython.display import HTML
 from IPython.display import clear_output
 from tqdm import tqdm
 
+from src.data_utils import load_train_test_df
 from src.utils import get_transform
 from src.constants import *
 from src.models import *
@@ -67,6 +68,8 @@ if __name__ == '__main__':
     train_set = torch.utils.data.ConcatDataset(listtrainset)
 
     # train_set = datasets.ImageFolder(os.path.join(data_dir, "train/"), transform=transform)
+    
+    train_dl, val_dl = load_train_test_df()
 
     generator = Generator().to(device)
     discriminator = Discriminator().to(device)
@@ -74,6 +77,8 @@ if __name__ == '__main__':
     discriminator.apply(weights_init)
     gen_optimizer = optim.Adam(generator.parameters(), lr=lr, betas=(beta1, beta2))
     dis_optimizer = optim.Adam(discriminator.parameters(), lr=lr_d, betas=(beta1, beta2))
+    
+    criterion = nn.CrossEntropyLoss()
 
 
     if LOAD_MODEL:
@@ -100,11 +105,11 @@ if __name__ == '__main__':
         test1(generator, discriminator, num_epochs, metrics)
     else:
         if TRAIN_ALL:
-            train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
-                                                    shuffle=True)
-            train_gan(generator, discriminator, gen_optimizer, dis_optimizer, train_loader,
+        #     train_loader = torch.utils.data.DataLoader(train_dl, batch_size=batch_size,
+        #                                             shuffle=True)
+            train_gan(generator, discriminator, gen_optimizer, dis_optimizer, train_dl,
                     num_epochs, metrics, device=device, criterion=criterion)
-            test2(generator, discriminator, num_epochs, metrics, train_loader)
+            test2(generator, discriminator, num_epochs, metrics, train_dl)
         else:
             # idx = []
             # idx = get_indices(train_set, 4, idx) #second argument is 0 for covid; 1 for normal; 2 for pneumonia_bacteria; 3 for pneumonia_virus for x-ray dataset

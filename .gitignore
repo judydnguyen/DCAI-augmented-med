@@ -3,3 +3,4 @@ wandb/*
 custom_covid_dataset/*
 skin_lesson_dataset/*
 *.dat
+*/__pycache__/*

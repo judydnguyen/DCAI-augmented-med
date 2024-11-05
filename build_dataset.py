@@ -8,7 +8,8 @@ from src.constants import *
 from src.models import *
 from src.train_utils import *
 
-PATH = "augGAN/model/-18.150_+1.225_200_2024-10-14_22:11:08.dat"
+# PATH = "augGAN/model/-18.150_+1.225_200_2024-10-14_22:11:08.dat"
+PATH = "augGAN/model/+0.100_+5.881_+0.678_200_2024-10-29_10:01:43.dat"
 
 
 # Assuming 'generator', 'discriminator', and 'metrics' are predefined models and metrics
@@ -84,8 +85,8 @@ def test_fake(generator, discriminator, metrics, n_images_per_class, paths, clas
             print(f'Generated {n_images_per_class} images for class {class_name}')
 
 # Assuming you have a generator, discriminator, and metrics objects available
-generator = netG(nz, ngf, nc).to(device)
-discriminator = netD(ndf, nc, nb_label).to(device)
+generator = netG(nz, ngf, 1).to(device)
+discriminator = netD(ndf, 1, 4).to(device)
 
 checkpoint = torch.load(PATH)
 generator.load_state_dict(checkpoint['state_dict_generator'])
@@ -98,10 +99,10 @@ for N in N_list:
     
     # Dynamically update paths based on the current N value
     paths = [
-        f'custom_covid_dataset/train_synthetic_proto/{N}/covid',
-        f'custom_covid_dataset/train_synthetic_proto/{N}/normal',
-        f'custom_covid_dataset/train_synthetic_proto/{N}/pneumonia_bac',
-        f'custom_covid_dataset/train_synthetic_proto/{N}/pneumonia_vir'
+        f'custom_covid_dataset/train_synthetic_proto_coeff_{0.01}/{N}/covid',
+        f'custom_covid_dataset/train_synthetic_proto_coeff_{0.01}/{N}/normal',
+        f'custom_covid_dataset/train_synthetic_proto_coeff_{0.01}/{N}/pneumonia_bac',
+        f'custom_covid_dataset/train_synthetic_proto_coeff_{0.01}/{N}/pneumonia_vir'
     ]
 
     # Call the function to generate N samples per class

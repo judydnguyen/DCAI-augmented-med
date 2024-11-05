@@ -7,7 +7,8 @@ sys.path.append("./")
 from src.constants import *
 
 # Number of channels in the training images. For color images this is 3
-nc = 1
+# nc = 1
+nc = 3
 # Size of z latent vector (i.e. size of generator input)
 nz = 100
 # Size of feature maps in discriminator
@@ -79,7 +80,7 @@ class Generator(nn.Module):
 # import torch.nn as nn
 
 class Discriminator(nn.Module):
-    def __init__(self, nc=1, ndf=64):
+    def __init__(self, nc=nc, ndf=64):
         super(Discriminator, self).__init__()
         # Define downsampling layers
         self.down_blocks = nn.Sequential(
@@ -245,6 +246,89 @@ class netG(nn.Module):
         output = self.Tanh(x)
         return output
     
+# class netD(nn.Module):
+#     def __init__(self, ndf=64, nc=3, nb_label=10):  # nc=3 for RGB
+#         super(netD, self).__init__()
+#         self.LeakyReLU = nn.LeakyReLU(0.2, inplace=True)
+#         self.DropOut1 = nn.Dropout(p=0.5)
+#         self.DropOut2 = nn.Dropout(p=0.25)
+
+#         # Convolutional layers
+#         self.conv1 = nn.Conv2d(nc, ndf, 4, 2, 1, bias=False)  # 224 -> 112
+#         self.conv2 = nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False)  # 112 -> 56
+#         self.BatchNorm2 = nn.BatchNorm2d(ndf * 2)
+#         self.conv3 = nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False)  # 56 -> 28
+#         self.BatchNorm3 = nn.BatchNorm2d(ndf * 4)
+#         self.conv4 = nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False)  # 28 -> 14
+#         self.BatchNorm4 = nn.BatchNorm2d(ndf * 8)
+#         self.conv5 = nn.Conv2d(ndf * 8, ndf * 16, 4, 2, 1, bias=False)  # 14 -> 7
+
+#         # Linear layers for discriminator and auxiliary classifier
+#         self.disc_linear = nn.Linear(ndf * 16 * 7 * 7, 1)
+#         self.aux_linear = nn.Linear(ndf * 16 * 7 * 7, nb_label)
+
+#         # Activation functions
+#         self.softmax = nn.Softmax(dim=1)
+#         self.sigmoid = nn.Sigmoid()
+
+#         self.ndf = ndf
+
+#         # Initialize weights
+#         self.apply(weights_init)
+
+#     def feature(self, input):
+#         x = self.conv1(input)  # 224 -> 112
+#         x = self.LeakyReLU(x)
+#         x = self.DropOut1(x)
+
+#         x = self.conv2(x)  # 112 -> 56
+#         x = self.BatchNorm2(x)
+#         x = self.LeakyReLU(x)
+
+#         x = self.conv3(x)  # 56 -> 28
+#         x = self.BatchNorm3(x)
+#         x = self.LeakyReLU(x)
+#         x = self.DropOut1(x)
+
+#         x = self.conv4(x)  # 28 -> 14
+#         x = self.BatchNorm4(x)
+#         x = self.LeakyReLU(x)
+#         x = self.DropOut2(x)
+
+#         x = self.conv5(x)  # 14 -> 7
+#         print(f"After conv5: {x.shape}")  # Debug
+
+#         # Flatten the tensor for linear layers
+#         batch_size = x.shape[0]
+#         x = x.view(batch_size, -1)
+#         print(f"After view: {x.shape}")  # Debug
+#         return x
+
+#     def forward(self, input):
+#         feat = self.feature(input)
+#         c = self.aux_linear(feat)
+#         c = self.softmax(c)
+#         s = self.disc_linear(feat)
+#         s = self.sigmoid(s)
+#         return s, c, feat
+
+# Weight initialization function
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+# Weight initialization function (optional, customize as needed)
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+    
 class netD(nn.Module):
 
     def __init__(self, ndf, nc, nb_label):
@@ -263,7 +347,7 @@ class netD(nn.Module):
         self.conv5 = nn.Conv2d(ndf * 8, ndf * 1, 4, 1, 0, bias=False)
         self.disc_linear = nn.Linear(ndf * 1, 1)
         self.aux_linear = nn.Linear(ndf * 1, nb_label)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=1)
         self.sigmoid = nn.Sigmoid()
         self.ndf = ndf
         self.apply(weights_init)
@@ -299,30 +383,31 @@ class netD(nn.Module):
         s = self.disc_linear(feat)
         s = self.sigmoid(s)
         return s, c, feat
-        # x = self.conv1(input)
-        # x = self.LeakyReLU(x)
-        # x = self.DropOut1(x)
+    
+        x = self.conv1(input)
+        x = self.LeakyReLU(x)
+        x = self.DropOut1(x)
 
-        # x = self.conv2(x)
-        # x = self.BatchNorm2(x)
-        # x = self.LeakyReLU(x)
-        # #x = self.DropOut(x)
+        x = self.conv2(x)
+        x = self.BatchNorm2(x)
+        x = self.LeakyReLU(x)
+        #x = self.DropOut(x)
 
-        # x = self.conv3(x)
-        # x = self.BatchNorm3(x)
-        # x = self.LeakyReLU(x)
-        # x = self.DropOut1(x)
+        x = self.conv3(x)
+        x = self.BatchNorm3(x)
+        x = self.LeakyReLU(x)
+        x = self.DropOut1(x)
 
-        # x = self.conv4(x)
-        # x = self.BatchNorm4(x)
-        # x = self.LeakyReLU(x)
-        # x = self.DropOut2(x)
+        x = self.conv4(x)
+        x = self.BatchNorm4(x)
+        x = self.LeakyReLU(x)
+        x = self.DropOut2(x)
 
-        # x = self.conv5(x)
-        # x = x.view(-1, self.ndf * 1)
-        # # import IPython; IPython.embed()
-        # c = self.aux_linear(x)
-        # c = self.softmax(c)
-        # s = self.disc_linear(x)
-        # s = self.sigmoid(s)
-        # return s, c
+        x = self.conv5(x)
+        x = x.view(-1, self.ndf * 1)
+        # import IPython; IPython.embed()
+        c = self.aux_linear(x)
+        c = self.softmax(c)
+        s = self.disc_linear(x)
+        s = self.sigmoid(s)
+        return s, c
