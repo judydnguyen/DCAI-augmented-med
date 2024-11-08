@@ -116,3 +116,7 @@ more informations about the work done [here](/report.pdf).
 - Original dataset `custom_covid_dataset/` is downloaded from original repo.
 
 
+# Pre-trained GANs for Skin-lession Dataset
+- Download ckpts for skin-lession trained with 400 epochs here: https://vanderbilt.box.com/s/g4zsdxl3tfxzuwdudnjd1ewk4dh9huvv
+- Set the proper paths to load these checkpoint on the `train_acgan_skin_baseline.py`
+- Generate new samples from this generative model and conduct the corresponding evaluation
