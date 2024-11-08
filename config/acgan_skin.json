@@ -1,0 +1,14 @@
+{
+    "nc": 3,
+    "batch_size": 128,
+    "num_epochs": 400,
+    "latent_dim": 100,
+    "image_size": 32,
+    "lr": 0.002,
+    "d_lr": 0.0002,
+    "ngpu": 2,
+    "output_dir": "output/acgan_skin/saved_images",
+    "checkpoint_dir": "output/acgan_skin/saved_models",
+    "load_checkpoint": true,
+    "data_dir": "/home/judy/code/sys-med/AUGMENTATION_GAN/skin_lesson_dataset/2"
+}

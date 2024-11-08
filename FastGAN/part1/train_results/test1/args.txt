@@ -1,0 +1,13 @@
+{
+  "path": "/home/judy/code/sys-med/AUGMENTATION_GAN/skin_lesson_dataset/2/ham10000_images_part_1",
+  "output_path": "/home/judy/code/sys-med/AUGMENTATION_GAN/FastGAN/part1",
+  "cuda": 0,
+  "name": "test1",
+  "iter": 50000,
+  "start_iter": 0,
+  "batch_size": 128,
+  "im_size": 256,
+  "ckpt": "None",
+  "workers": 2,
+  "save_interval": 100
+}
