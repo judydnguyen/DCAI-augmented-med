@@ -35,6 +35,20 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+def compute_acc(preds, labels):
+    correct = 0
+    preds_ = preds.data.max(1)[1]
+    # if either has small size
+    # if len(preds_) != len(labels):
+    #     labels = labels[:len(preds_)]
+    if len(preds_) > len(labels):
+        preds_ = preds_[:len(labels)]
+    elif len(preds_) < len(labels):
+        labels = labels[:len(preds_)]
+        
+    correct = preds_.eq(labels.data).cpu().sum()
+    acc = float(correct) / float(len(labels.data)) * 100.0
+    return acc
 
 def plot(name, train_epoch, values, path, save):
     # clear_output(wait=True)
