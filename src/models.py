@@ -1,21 +1,136 @@
-# import sys
-# import torch
-# import torch.nn as nn
+import sys
+import torch
+import torch.nn as nn
 
-# sys.path.append("./")
+sys.path.append("./")
 
-# from src.constants import *
+from src.constants import *
 
-# # Number of channels in the training images. For color images this is 3
-# # nc = 1
-# nc = 3
-# # Size of z latent vector (i.e. size of generator input)
-# nz = 100
-# # Size of feature maps in discriminator
-# ndf = 64
-# # Size of feature maps in generator
-# ngf = 64
+# Number of channels in the training images. For color images this is 3
+# nc = 1
+nc = 3
+# Size of z latent vector (i.e. size of generator input)
+nz = 100
+# Size of feature maps in discriminator
+ndf = 64
+# Size of feature maps in generator
+ngf = 64
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
+class netG(nn.Module):
+
+    def __init__(self, nz, ngf, nc):
+
+        super(netG, self).__init__()
+        self.ReLU = nn.ReLU(True)
+        self.Tanh = nn.Tanh()
+        #self.DropOut = nn.Dropout(p=0.75)
+        #self.conv0 = nn.ConvTranspose2d(nz, ngf * 16, 4, 1, 1, bias=False)
+        #self.BatchNorm0 = nn.BatchNorm2d(ngf * 16)
+        self.conv1 = nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False)
+        self.BatchNorm1 = nn.BatchNorm2d(ngf * 8)
+
+        self.conv2 = nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False)
+        self.BatchNorm2 = nn.BatchNorm2d(ngf * 4)
+
+        self.conv3 = nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False)
+        self.BatchNorm3 = nn.BatchNorm2d(ngf * 2)
+
+        self.conv4 = nn.ConvTranspose2d(ngf * 2, ngf * 1, 4, 2, 1, bias=False)
+        self.BatchNorm4 = nn.BatchNorm2d(ngf * 1)
+
+        self.conv5 = nn.ConvTranspose2d(ngf * 1, nc, 4, 2, 1, bias=False)
+
+        self.apply(weights_init)
+    def forward(self, input):
+        #x = self.conv0(input)
+        #x = self.BatchNorm0(x)
+        #x = self.ReLU(x)
+        x = self.conv1(input)
+        x = self.BatchNorm1(x)
+        x = self.ReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv2(x)
+        x = self.BatchNorm2(x)
+        x = self.ReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv3(x)
+        x = self.BatchNorm3(x)
+        x = self.ReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv4(x)
+        x = self.BatchNorm4(x)
+        x = self.ReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv5(x)
+        output = self.Tanh(x)
+        return output
+    
+class netD(nn.Module):
+
+    def __init__(self, ndf, nc, nb_label):
+
+        super(netD, self).__init__()
+        self.LeakyReLU = nn.LeakyReLU(0.2, inplace=True)
+        self.DropOut1 = nn.Dropout(p=0.5)
+        self.DropOut2 = nn.Dropout(p=0.25)
+        self.conv1 = nn.Conv2d(nc, ndf, 4, 2, 1, bias=False)
+        self.conv2 = nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False)
+        self.BatchNorm2 = nn.BatchNorm2d(ndf * 2)
+        self.conv3 = nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False)
+        self.BatchNorm3 = nn.BatchNorm2d(ndf * 4)
+        self.conv4 = nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False)
+        self.BatchNorm4 = nn.BatchNorm2d(ndf * 8)
+        self.conv5 = nn.Conv2d(ndf * 8, ndf * 1, 4, 1, 0, bias=False)
+        self.disc_linear = nn.Linear(ndf * 1, 1)
+        self.aux_linear = nn.Linear(ndf * 1, nb_label)
+        self.softmax = nn.Softmax()
+        self.sigmoid = nn.Sigmoid()
+        self.ndf = ndf
+        self.apply(weights_init)
+    
+    def feature(self, input):
+        x = self.conv1(input)
+        x = self.LeakyReLU(x)
+        x = self.DropOut1(x)
+
+        x = self.conv2(x)
+        x = self.BatchNorm2(x)
+        x = self.LeakyReLU(x)
+        #x = self.DropOut(x)
+
+        x = self.conv3(x)
+        x = self.BatchNorm3(x)
+        x = self.LeakyReLU(x)
+        x = self.DropOut1(x)
+
+        x = self.conv4(x)
+        x = self.BatchNorm4(x)
+        x = self.LeakyReLU(x)
+        x = self.DropOut2(x)
+
+        x = self.conv5(x)
+        x = x.view(-1, self.ndf * 1)
+        return x
+    
+    def forward(self, input):
+        feat = self.feature(input)
+        c = self.aux_linear(feat)
+        c = self.softmax(c)
+        s = self.disc_linear(feat)
+        s = self.sigmoid(s)
+        return s, c, feat
 
 # class Generator(nn.Module):
 #     def __init__(self):
@@ -415,7 +530,7 @@
 
 import torch
 import torch.nn as nn
-
+import torchvision.models as models
 
 class _netG(nn.Module):
     def __init__(self, ngpu, nz):
@@ -556,7 +671,7 @@ class _netD(nn.Module):
             fc_aux = self.fc_aux(flat6)
         classes = self.softmax(fc_aux)
         realfake = self.sigmoid(fc_dis).view(-1, 1).squeeze(1)
-        return realfake, classes
+        return realfake, classes, flat6
 
 
 class _netG_CIFAR10(nn.Module):
@@ -611,6 +726,24 @@ class _netG_CIFAR10(nn.Module):
             tconv5 = self.tconv5(tconv4)
             output = tconv5
         return output
+
+class PerceptualLoss(nn.Module):
+    def __init__(self, layer_ids=[0, 5, 10, 19, 28]):
+        super(PerceptualLoss, self).__init__()
+        # Load pre-trained VGG19
+        vgg = models.vgg19(pretrained=True).features
+        self.feature_extractor = nn.Sequential(*[vgg[i] for i in layer_ids]).eval()
+        for param in self.feature_extractor.parameters():
+            param.requires_grad = False  # Freeze the feature extractor
+        
+    def forward(self, gen_image, target_image):
+        # Ensure images are normalized and have the correct size
+        gen_features = self.feature_extractor(gen_image)
+        target_features = self.feature_extractor(target_image)
+        
+        # Compute perceptual loss as L1 difference between feature maps
+        loss = torch.mean(torch.abs(gen_features - target_features))
+        return loss
 
 
 class _netD_CIFAR10(nn.Module):
@@ -694,4 +827,4 @@ class _netD_CIFAR10(nn.Module):
             # import IPython; IPython.embed()
         classes = self.softmax(fc_aux)
         realfake = self.sigmoid(fc_dis).view(-1, 1).squeeze(1)
-        return realfake, classes
+        return realfake, classes, flat6
