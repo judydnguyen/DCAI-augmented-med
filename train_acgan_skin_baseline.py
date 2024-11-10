@@ -63,7 +63,6 @@ def smooth_labels(labels, smoothing=0.1):
         smoothed_labels = labels * (1.0 - smoothing) + 0.5 * smoothing
     return smoothed_labels
 
-
 def train_acgan(discriminator, generator, optimizerD, optimizerG , train_loader, num_epochs, metrics, args):
     for param_group in optimizerG.param_groups:
         param_group['lr'] *= 1.1  # Increase by 10%
@@ -92,11 +91,11 @@ def train_acgan(discriminator, generator, optimizerD, optimizerG , train_loader,
     epoch_loss_G = []
     epoch_accuracy = []
     
-    for epoch in tqdm(range(num_epochs)):
+    for epoch in tqdm(range(num_epochs), desc='Epochs'):
         total_loss_D = 0
         total_loss_G = 0
         total_accuracy = 0
-        for i, data in tqdm(enumerate(train_loader, 0)):
+        for i, data in tqdm(enumerate(train_loader, 0), desc='Batches', total=len(train_loader)):
             ############################
             # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
             ###########################
@@ -121,7 +120,7 @@ def train_acgan(discriminator, generator, optimizerD, optimizerG , train_loader,
             dis_label = dis_label.to(device)
             aux_label = aux_label.to(device)
             # import IPython; IPython.embed()
-            dis_output, aux_output = discriminator(input)
+            dis_output, aux_output, _ = discriminator(input)
             # import IPython; IPython.embed()
             
             dis_errD_real = dis_criterion(dis_output, dis_label)
@@ -150,7 +149,7 @@ def train_acgan(discriminator, generator, optimizerD, optimizerG , train_loader,
             
             fake = generator(noise)
             dis_label.data.fill_(fake_label)
-            dis_output, aux_output = discriminator(fake.detach())
+            dis_output, aux_output, _ = discriminator(fake.detach())
             dis_errD_fake = dis_criterion(dis_output, dis_label)
             aux_errD_fake = aux_criterion(aux_output, aux_label)
             errD_fake = dis_errD_fake + aux_errD_fake
@@ -165,7 +164,7 @@ def train_acgan(discriminator, generator, optimizerD, optimizerG , train_loader,
             ###########################
             generator.zero_grad()
             dis_label.data.fill_(real_label)
-            dis_output, aux_output = discriminator(fake)
+            dis_output, aux_output, _ = discriminator(fake)
             dis_errG = dis_criterion(dis_output, dis_label)
             aux_errG = aux_criterion(aux_output, aux_label)
             errG = dis_errG + aux_errG
