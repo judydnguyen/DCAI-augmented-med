@@ -78,7 +78,7 @@ from torch.utils.data import Subset
 from torch.utils.data import DataLoader, SubsetRandomSampler
 import numpy as np
 
-def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=64, batch_size=32, subset_size=5000):
+def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=64, batch_size=32, subset_size=5000, train=False):
     df_train = pd.read_pickle(PARENT_PATH + '/train_data.pkl').reset_index(drop=True)
     df_val = pd.read_pickle(PARENT_PATH + '/val_data.pkl').reset_index(drop=True)
 
@@ -90,9 +90,20 @@ def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=64, batc
         # transforms.ColorJitter(brightness=0.1, contrast=0.1, hue=0.1),
         transforms.ToTensor(),
         # transforms.Normalize(norm_mean, norm_std)
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        # transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     ])
     
+    if train == True:
+        train_transform = transforms.Compose([
+            transforms.Resize((input_size, input_size)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.RandomRotation(20),
+            transforms.ColorJitter(brightness=0.1, contrast=0.1, hue=0.1),
+            transforms.ToTensor(),
+            transforms.Normalize(norm_mean, norm_std)
+        ])
+        
     val_transform = transforms.Compose([
         transforms.Resize((input_size, input_size)),
         transforms.ToTensor(),
@@ -103,8 +114,8 @@ def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=64, batc
     validation_set = HAM10000(df_val, transform=val_transform)
 
     # Create DataLoaders
-    train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True, pin_memory=True)
-    val_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=True, pin_memory=True)
+    train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True, num_workers=54, drop_last=True, pin_memory=True)
+    val_loader = DataLoader(validation_set, batch_size=batch_size, shuffle=False, num_workers=54, drop_last=True, pin_memory=True)
 
     # Create a random subset of training indices
     num_samples = len(training_set)
