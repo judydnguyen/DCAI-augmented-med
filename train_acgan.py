@@ -103,7 +103,7 @@ def update_prototype(current_feat, current_label, total_feat_mean):
                 total_feat_mean[cls] = (total_feat_mean[cls] + class_feat) / 2  # Moving average
     return total_feat_mean
 
-def train_acgan(discriminator, generator, train_loader, num_epochs, metrics, batch_size=32, coeff=0.2):
+def train_acgan(discriminator, generator, train_loader, num_epochs, metrics, batch_size=32):
     
     optimizerD = optim.Adam(discriminator.parameters(), lr=lr_d, betas=(beta1, beta2))
     optimizerG = optim.Adam(generator.parameters(), lr=lr, betas=(beta1, beta2))
@@ -199,8 +199,7 @@ def train_acgan(discriminator, generator, train_loader, num_epochs, metrics, bat
                     proto_loss += torch.mean((f_F[mask] - total_feat_mean_real[cls].detach()) ** 2)
 
             # Final Generator loss
-            coeff = 0
-            errG = s_errG + c_errG + coeff*proto_loss
+            errG = s_errG + c_errG + 0.2*proto_loss
             errG.backward(retain_graph=True)
             D_G_z2 = s_output.data.mean()
             
@@ -226,7 +225,7 @@ def train_acgan(discriminator, generator, train_loader, num_epochs, metrics, bat
                         '%s/fake_samples_epoch_%03d.png' % ('./augGAN/output_images_prototype/ACGAN', epoch), normalize=True)
 
     # Save model checkpoint
-    save_model(generator, discriminator, optimizerG, optimizerD, metrics, num_epochs, coeff)
+    save_model(generator, discriminator, optimizerG, optimizerD, metrics, num_epochs)
 
 
 # def train_acgan(discriminator, generator, train_loader, num_epochs, metrics, batch_size=32):
@@ -391,11 +390,11 @@ def test2(generator, discriminator, num_epochs, metrics, loader):
     fig.savefig('%s/image_%.3f_%.3f_%d_%s.png' %
                    (path, g_losses, d_losses, num_epochs, now.strftime("%Y-%m-%d_%H:%M:%S")))
 
-def save_model(generator, discriminator, gen_optimizer, dis_optimizer, metrics, num_epochs, coeff=0.2):
+def save_model(generator, discriminator, gen_optimizer, dis_optimizer, metrics, num_epochs):
     now = datetime.datetime.now()
     g_losses = metrics['train.G_losses'][-1]
     d_losses = metrics['train.D_losses'][-1]
-    name = "%+.3f_%+.3f_%+.3f_%d_%s.dat" % (coeff, g_losses, d_losses, num_epochs, now.strftime("%Y-%m-%d_%H:%M:%S"))
+    name = "%+.3f_%+.3f_%d_%s.dat" % (g_losses, d_losses, num_epochs, now.strftime("%Y-%m-%d_%H:%M:%S"))
     fname = os.path.join('.', 'augGAN/model', name)
     states = {
             'state_dict_generator': generator.state_dict(),
@@ -407,7 +406,7 @@ def save_model(generator, discriminator, gen_optimizer, dis_optimizer, metrics, 
             'date': now.strftime("%Y-%m-%d_%H:%M:%S"),
     }
     torch.save(states, fname)
-    path='augGAN/plots/ACGAN/coeff_%+.3f/train_%+.3f_%+.3f_%s'% (coeff, g_losses, d_losses, now.strftime("%Y-%m-%d_%H:%M:%S"))
+    path='augGAN/plots/ACGAN/train_%+.3f_%+.3f_%s'% (g_losses, d_losses, now.strftime("%Y-%m-%d_%H:%M:%S"))
     try:
       os.makedirs(os.path.join('.', path), exist_ok=True)
     except Exception as error:
@@ -421,13 +420,6 @@ def save_model(generator, discriminator, gen_optimizer, dis_optimizer, metrics, 
     
 if __name__=='__main__':
     # Set random seed for reproducibility
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num_epochs', type=int, default=5, help='number of epochs')
-    parser.add_argument('--batch_size', type=int, default=32, help='batch size')
-    parser.add_argument('--coeff', type=float, default=0.2, help='prototype loss coefficient')
-    
-    args = parser.parse_args()
-    
     manualSeed = 999
     random.seed(manualSeed)
     torch.manual_seed(manualSeed)
@@ -449,8 +441,6 @@ if __name__=='__main__':
 
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size,
                                           shuffle=True)
-    # take a subset of the train loader
-
     mask =[x[1]==0 for x in train_loader.dataset] #here is 0 for covid; 1 for normal; 2 for pneumonia_bacteria; 3 for pneumonia_virus for x-ray dataset
     idx= np.arange(len(train_loader.dataset))[mask]
     print("Total samples now are ",len(idx))
@@ -463,7 +453,7 @@ if __name__=='__main__':
     generator.train()
     discriminator.train()
     
-    train_acgan(discriminator, generator, train_loader, num_epochs, metrics, coeff=args.coeff)
+    train_acgan(discriminator, generator, train_loader, num_epochs, metrics)
     test2(generator, discriminator, num_epochs, metrics, train_loader)
 
     # trainset0 = datasets.ImageFolder(os.path.join(
