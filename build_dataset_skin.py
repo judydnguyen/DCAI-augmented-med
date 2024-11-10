@@ -17,8 +17,8 @@ GENERATOR_PATH = "/home/judy/code/sys-med/AUGMENTATION_GAN/output/acgan_skin/sav
 DISCRIMINATOR_PATH = "/home/judy/code/sys-med/AUGMENTATION_GAN/output/acgan_skin/saved_models/0.001/netD_epoch_350_last.pth"
 
 # Paths to the saved models for baseline ACGAN + Proto
-GENERATOR_PATH = "/home/judy/code/sys-med/AUGMENTATION_GAN/output/acgan_skin/saved_models/ckpts/netG_epoch_300_sz_32.pth"
-DISCRIMINATOR_PATH = "/home/judy/code/sys-med/AUGMENTATION_GAN/output/acgan_skin/saved_models/ckpts/netD_epoch_300_sz_32.pth"
+GENERATOR_PATH = "/home/judy/code/sys-med/AUGMENTATION_GAN/output/acgan_skin/saved_models/ckpts/netG_epoch_350_sz_32.pth"
+DISCRIMINATOR_PATH = "/home/judy/code/sys-med/AUGMENTATION_GAN/output/acgan_skin/saved_models/ckpts/netD_epoch_350_sz_32.pth"
 
 # Assuming 'generator', 'discriminator', and 'metrics' are predefined models and metrics
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
