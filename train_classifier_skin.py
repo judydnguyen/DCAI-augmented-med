@@ -1,5 +1,5 @@
 import argparse
-from build_dataset_skin import build_data_loader_from_synthetic
+from build_dataset_skin import build_data_loader_from_synthetic, get_df_class_dataset
 import os, cv2,itertools
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,7 +28,80 @@ from src.utils import set_seed
 import wandb
 
 SEED = 42
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+def tsne_plot(model, data_loader, num_classes=7, save_path=""):
+    from sklearn.manifold import TSNE
+    import seaborn as sn
+    from sklearn.decomposition import PCA
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import numpy as np
+    import torch
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    from sklearn.manifold import TSNE
+    feature_extractor = torch.nn.Sequential(*list(model.children())[:-1])
+    feature_extractor.eval()
+    model.eval()
+    all_features = []
+    all_labels = []
+    with torch.no_grad():
+        for i, data in enumerate(data_loader):
+            images, labels = data
+            images = Variable(images).to(device)
+            labels = Variable(labels).to(device)
+            # features = model(images)
+            features = feature_extractor(images).squeeze()
+            all_features.append(features)
+            all_labels.append(labels)
+    all_features = torch.cat(all_features)
+    all_labels = torch.cat(all_labels)
+    # select a more balanced subset of the data
+    # remove a part of largest classes
+    class_counts = all_labels.bincount()
+    max_count = 100
+    print('max count:', max_count)
+    all_features_balanced = []
+    all_labels_balanced = []
+    for i in range(num_classes):
+        if i == 4:
+            continue
+        mask = all_labels == i
+        if mask.sum() > max_count:
+            # import IPython; IPython.embed()
+            # mask = mask[torch.randperm(mask.size(0))[:max_count]]
+            all_features_balanced.append(all_features[mask][:max_count])
+            all_labels_balanced.append(all_labels[mask][:max_count])
+        else:
+            all_features_balanced.append(all_features[mask])
+            all_labels_balanced.append(all_labels[mask])
+    all_features = torch.cat(all_features_balanced)
+    all_labels = torch.cat(all_labels_balanced)
+    
+    all_features = all_features.cpu().numpy()
+    all_labels = all_labels.cpu().numpy()
+    tsne = TSNE(n_components=2, verbose=1, perplexity=2, learning_rate=150, n_iter=500, random_state=42)
+    tsne_results = tsne.fit_transform(all_features)
+    df_subset = pd.DataFrame()
+    df_subset['tsne-2d-one'] = tsne_results[:,0]
+    df_subset['tsne-2d-two'] = tsne_results[:,1]
+    df_subset['y'] = all_labels
+    plt.figure(figsize=(16,10))
+    markers = {0: "o", 1: "X", 2: "s", 3: "D", 4: "^", 5: "P", 6: "*"}
+    sns.scatterplot(
+        x="tsne-2d-one", y="tsne-2d-two",
+        hue="y",
+        palette=sns.color_palette("deep", num_classes),
+        data=df_subset,
+        legend="full",
+        alpha=0.7,
+        markers=markers
+    )
+    saved_img_path = os.path.join(save_path, 'tsne.png')
+    plt.savefig(saved_img_path)
+    # plt.savefig(os.join'tsne.png')
+    # plt.show()
 
 def validate(val_loader, model, criterion, optimizer, epoch):
     model.eval()
@@ -138,16 +211,19 @@ def main(args):
                                                             train=True)
     if args.use_synthetic:
         # train_loader = subset_train
-        synthetic_loader = build_data_loader_from_synthetic(batch_size=args.batch_size)
+        synthetic_loader = build_data_loader_from_synthetic(batch_size=args.batch_size, use_proto=args.use_proto)
         synthetic_dataset = synthetic_loader.dataset
         
         # merge the two datasets
         # import IPython; IPython.embed()
+        # df_class_dataset = get_df_class_dataset()
         
+        # train_loader = torch.utils.data.ConcatDataset([train_loader.dataset, synthetic_dataset, df_class_dataset])
         train_loader = torch.utils.data.ConcatDataset([train_loader.dataset, synthetic_dataset])
         
         train_loader = DataLoader(train_loader, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
-        
+
+        # df_dataset 
     model = get_cls_model(args.model, args.num_classes, args.pretrained)
     model.to(device)
     print(f"Loaded model: {args.model},\n {model}")
@@ -169,12 +245,13 @@ def main(args):
                             'loss_train': loss_train, 'acc_train': acc_train})
         if acc_val > best_val_acc:
             best_val_acc = acc_val
+            # tsne_plot(model, val_dl, num_classes=args.num_classes, save_path=f"{args.output_dir}/{model_save_name}")
             print('*****************************************************')
             print('best record: [epoch %d], [val loss %.5f], [val acc %.5f]' % (epoch, loss_val, acc_val))
             print('*****************************************************')
             model_save_name = f'proto_{args.use_proto}_synthetic_{args.use_synthetic}_baseline_{args.model}_best_model'
             torch.save(model.state_dict(), os.path.join(args.output_dir, f'{model_save_name}.pth'))
-        
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Skin Lesion Training')
     parser.add_argument('--image_size', type=int, default=32, help='image size')

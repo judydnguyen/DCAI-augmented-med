@@ -3,4 +3,6 @@ wandb/*
 custom_covid_dataset/*
 skin_lesson_dataset/*
 *.dat
+output/acgan_skin/*
+*.zip
 */__pycache__/*

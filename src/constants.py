@@ -74,7 +74,7 @@ ngf = 64
 ndf = 64
 
 # No of labels
-nb_label = 4
+nb_label = 7
 
 # Learning rate for optimizers
 # lr = 0.002

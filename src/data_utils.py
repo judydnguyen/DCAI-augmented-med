@@ -81,6 +81,7 @@ import numpy as np
 def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=64, batch_size=32, subset_size=5000, train=False):
     df_train = pd.read_pickle(PARENT_PATH + '/train_data.pkl').reset_index(drop=True)
     df_val = pd.read_pickle(PARENT_PATH + '/val_data.pkl').reset_index(drop=True)
+    df_subset = pd.read_pickle(PARENT_PATH + '/train_data_balanced.pkl').reset_index(drop=True)
 
     train_transform = transforms.Compose([
         transforms.Resize((input_size, input_size)),
@@ -112,6 +113,7 @@ def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=64, batc
 
     training_set = HAM10000(df_train, transform=train_transform)
     validation_set = HAM10000(df_val, transform=val_transform)
+    subset_set = HAM10000(df_subset, transform=train_transform)
 
     # Create DataLoaders
     train_loader = DataLoader(training_set, batch_size=batch_size, shuffle=True, num_workers=54, drop_last=True, pin_memory=True)
@@ -123,5 +125,5 @@ def load_train_test_df(norm_mean=normMean, norm_std=normStd, input_size=64, batc
     
     subset_sampler = SubsetRandomSampler(subset_indices)
     subset_train_loader = DataLoader(training_set, batch_size=batch_size, sampler=subset_sampler, num_workers=8, drop_last=True, pin_memory=True)
-
-    return train_loader, val_loader, subset_train_loader
+    subset_train_loader_all = DataLoader(subset_set, batch_size=batch_size, shuffle=True, num_workers=54, drop_last=True, pin_memory=True)
+    return train_loader, val_loader, subset_train_loader_all
